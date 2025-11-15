@@ -11,10 +11,10 @@ COMROOM Project는 책상 위에 있는 물건을 실시간으로 탐지하고
 ## 🚀 주요 기능
 
 ### 1.  YOLO기반 객체 탐지
-- Roboflow에서 직접 라벨링한 16개 클래스 사용  
+- Roboflow에서 직접 라벨링한 15개 클래스 사용  
 airpods, cell phone, tissue, mouse, laptop,
 bottle, glasses, jelly, card, wallet,
-lipbalm, notebook, remocon, pen, carkey
+lipbalm, notebook, remocon, pen, applewatch
 
 
 ### 2. 음성 인식(STT)
