@@ -2,7 +2,7 @@ from gtts import gTTS
 from playsound import playsound
 
 # 변환할 텍스트
-text = "sexy"
+text = "응응"
 
 # 한국어 설정으로 음성 생성
 tts = gTTS(text=text, lang='ko')

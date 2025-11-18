@@ -1,0 +1,109 @@
+# ================================
+# 📌 기본 OS / 에디터
+# ================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# VSCode
+.vscode/
+.code-workspace
+
+# ================================
+# 📌 Python
+# ================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+
+# 환경 파일
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# 패키지/빌드
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 로그
+*.log
+
+# ================================
+# 📌 이미지 / 라벨링 데이터
+# ================================
+# 일반 이미지
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.gif
+
+# 라벨링 파일
+*.json
+*.xml
+*.yaml
+*.txt
+
+# Roboflow export zip
+*.zip
+
+# ================================
+# 📌 YOLO 관련 파일
+# ================================
+# 학습 weight
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tensor
+*.trt
+
+# 자동 생성
+runs/
+results/
+labels.cache
+
+# ================================
+# 📌 Jupyter / Colab
+# ================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ================================
+# 📌 기타 잡파일
+# ================================
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp
+*.old
