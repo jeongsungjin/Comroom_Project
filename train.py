@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from ultralytics import YOLO
@@ -9,13 +10,15 @@ PROJECT_ROOT = Path(__file__).parent.absolute()
 WEIGHTS_DIR = PROJECT_ROOT / "weights"
 WEIGHTS_DIR.mkdir(exist_ok=True)
 
+# 실시간 추론 해상도를 유지하면서도 8GB급 GPU에서 학습이 가능하도록
+# 기본 모델을 yolov8m으로 변경 (필요 시 YOLO_MODEL 환경변수로 재정의)
+MODEL_NAME = os.environ.get("YOLO_MODEL", "yolov8m.pt")
+PRETRAINED_WEIGHTS = WEIGHTS_DIR / MODEL_NAME
+
 # 프리트레인 모델 가중치 (없으면 자동 다운로드)
-PRETRAINED_WEIGHTS = WEIGHTS_DIR / "yolov8l.pt"
 if not PRETRAINED_WEIGHTS.exists():
-    print(f"프리트레인 모델을 다운로드합니다: {PRETRAINED_WEIGHTS}")
-    # ultralytics가 자동으로 다운로드하므로 경로만 지정
-    model = YOLO("yolov8l.pt")  # 자동 다운로드
-    # 다운로드된 파일을 weights 디렉토리로 복사 (선택사항)
+    print(f"프리트레인 모델을 다운로드합니다: {MODEL_NAME}")
+    model = YOLO(MODEL_NAME)  # 자동 다운로드
 else:
     model = YOLO(str(PRETRAINED_WEIGHTS))
 
@@ -30,7 +33,7 @@ if not DATA_YAML.exists():
 print("\n" + "="*60)
 print("🚀 YOLO v8 파인튜닝 시작")
 print("="*60)
-print(f"📦 프리트레인 모델: {PRETRAINED_WEIGHTS}")
+print(f"📦 프리트레인 모델: {MODEL_NAME}")
 print(f"📁 데이터셋 설정: {DATA_YAML}")
 print(f"📊 학습 이미지: train/images")
 print(f"📊 검증 이미지: valid/images")
@@ -39,14 +42,15 @@ print("="*60 + "\n")
 results = model.train(
     data=str(DATA_YAML),
     epochs=50,
-    imgsz=640,  # CPU 학습 시 640 권장 (1280은 메모리 부족 가능)
-    batch=4,  # CPU 학습 시 적절한 배치 크기
-    device='cpu',   # GPU 사용 시 '0' 또는 0, CPU면 'cpu' (CUDA 확인 후 수정 가능)
-    workers=0,  # CPU 학습 시 workers=0 권장 (메모리 절약)
+    imgsz=1280,  # 실시간 추론 해상도(1280x720)를 맞추기 위해 유지
+    batch=1,  # GPU 메모리 확보를 위해 배치 1
+    device='0',   # GPU 사용 시 '0' 또는 0, CPU면 'cpu' (CUDA 확인 후 수정 가능)
+    workers=2,  # dataloader 메모리 사용 최소화
+    rect=True,  # 16:9 비율을 최대한 유지해 패딩 낭비 감소
     plots=True,  # 학습 결과 그래프 생성
     save=True,
     save_period=10,  # 10 에포크마다 체크포인트 저장
-    amp=False,  # CPU에서는 AMP 비활성화
+    amp=True,  # CPU에서는 AMP 비활성화
 )
 
 # 학습 완료 후 최고 모델을 weights 디렉토리로 복사

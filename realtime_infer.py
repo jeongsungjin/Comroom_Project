@@ -1,4 +1,6 @@
 import argparse
+import os
+import sys
 import time
 from typing import Union, Optional
 
@@ -12,6 +14,9 @@ try:
 except ImportError:
     REALSENSE_AVAILABLE = False
     print("경고: pyrealsense2가 설치되지 않았습니다. RealSense 카메라를 사용할 수 없습니다.")
+
+
+WINDOW_TITLE = "YOLOv8 Realtime Inference"
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,7 +46,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",  # GPU 사용 시 "0", CPU 사용 시 "cpu"
+        default="auto",  # "auto" 선택 시 가용 GPU 자동 사용
+        help="추론 장치 ('auto', 'cpu', 'cuda:0', '0', 'mps' 등)",
     )
     parser.add_argument(
         "--save",
@@ -71,6 +77,38 @@ def parse_args() -> argparse.Namespace:
 
 def to_int_if_digit(text: str) -> Union[int, str]:
     return int(text) if text.isdigit() else text
+
+
+def resolve_device_argument(device_arg: str) -> str:
+    requested = (device_arg or "").strip()
+    normalized = requested.lower()
+    if normalized and normalized not in {"auto", "autodetect"}:
+        return requested
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    if torch.cuda.is_available():
+        return "cuda:0"
+
+    mps_available = (
+        hasattr(torch.backends, "mps")
+        and hasattr(torch.backends.mps, "is_available")
+        and torch.backends.mps.is_available()
+    )
+    if mps_available:
+        return "mps"
+
+    return "cpu"
+
+
+def is_gui_available() -> bool:
+    if os.name == "nt":
+        return True
+    if sys.platform == "darwin":
+        return True
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
 def load_homography(path: str) -> Union[np.ndarray, None]:
@@ -143,6 +181,16 @@ def get_frame_realsense(pipeline: rs.pipeline) -> Optional[np.ndarray]:
 def main() -> None:
     args = parse_args()
 
+    resolved_device = resolve_device_argument(args.device)
+    if resolved_device != args.device:
+        print(f"⚙️  추론 장치 자동 선택: {resolved_device}")
+    args.device = resolved_device
+
+    gui_enabled = args.show and is_gui_available()
+    if args.show and not gui_enabled:
+        print("⚠️  GUI 환경(DESKTOP/DISPLAY)을 찾을 수 없어 imshow를 사용할 수 없습니다.")
+        print("    로컬 환경 또는 X11 포워딩을 사용하거나 --show 옵션을 제거하세요.")
+
     model = YOLO(args.weights)
     H = load_homography(args.homography)
 
@@ -179,6 +227,7 @@ def main() -> None:
     prev_time = time.time()
     initialized_size = False
     frame_idx = 0
+    window_created = False
 
     try:
         while True:
@@ -276,10 +325,25 @@ def main() -> None:
             if writer is not None:
                 writer.write(annotated)
 
-            if args.show:
-                cv2.imshow("YOLOv8 Realtime Inference", annotated)
-                if cv2.waitKey(1) & 0xFF == 27:
-                    break
+            if gui_enabled:
+                if not window_created:
+                    try:
+                        cv2.namedWindow(WINDOW_TITLE, cv2.WINDOW_NORMAL)
+                        window_created = True
+                    except cv2.error as exc:
+                        print(f"❌ OpenCV 윈도우 생성 실패: {exc}")
+                        print("   DISPLAY 설정을 확인하거나 --show 옵션을 비활성화하세요.")
+                        gui_enabled = False
+                        continue
+                try:
+                    cv2.imshow(WINDOW_TITLE, annotated)
+                except cv2.error as exc:
+                    print(f"❌ OpenCV imshow 오류: {exc}")
+                    print("   GUI 환경 문제로 imshow가 비활성화됩니다.")
+                    gui_enabled = False
+                else:
+                    if cv2.waitKey(1) & 0xFF == 27:
+                        break
     finally:
         if pipeline is not None:
             pipeline.stop()
@@ -287,7 +351,7 @@ def main() -> None:
             cap.release()
         if writer is not None:
             writer.release()
-        if args.show:
+        if window_created:
             cv2.destroyAllWindows()
 
 
